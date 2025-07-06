@@ -1,9 +1,11 @@
 import pygame as pg
 import sys
 import random
+import os
 
 # Initialize pygame
 pg.init()
+pg.mixer.init()
 
 # Game settings
 WIDTH, HEIGHT = 800, 600
@@ -22,6 +24,32 @@ CYAN = (50, 220, 220)
 BUTTON_COLOR = (50, 180, 80)
 ROAD_COLOR = (40, 40, 45)
 SHOULDER_COLOR = (70, 70, 75)
+
+# Music setup
+def load_music():
+    music_folder = "music"  # Folder where music files are stored
+    try:
+        # Check if music folder exists, create if not
+        if not os.path.exists(music_folder):
+            os.makedirs(music_folder)
+            print(f"Created '{music_folder}' folder. Please add your music files there.")
+            return None
+        
+        # Get all music files from the folder
+        music_files = [f for f in os.listdir(music_folder) if f.endswith(('.mp3', '.wav', '.ogg'))]
+        
+        if not music_files:
+            print(f"No music files found in '{music_folder}' folder.")
+            return None
+            
+        # Select a random music file
+        selected_music = os.path.join(music_folder, random.choice(music_files))
+        pg.mixer.music.load(selected_music)
+        pg.mixer.music.set_volume(0.5)  # Set volume to 50%
+        return selected_music
+    except Exception as e:
+        print(f"Error loading music: {e}")
+        return None
 
 # Enhanced car class with better styling and windows for all cars
 class Car:
@@ -146,9 +174,16 @@ class Game:
         self.play_button = Button(WIDTH//2 - 100, HEIGHT//2, 200, 60, "START RACE")
         self.clock_speed = 1.2
         
+        # Load and play music
+        self.current_music = load_music()
+        if self.current_music:
+            pg.mixer.music.play(-1)  # -1 means loop indefinitely
+            
     def handle_events(self):
         for event in pg.event.get():
             if event.type == pg.QUIT:
+                if self.current_music:
+                    pg.mixer.music.stop()
                 pg.quit()
                 sys.exit()
                 
@@ -206,6 +241,8 @@ class Game:
                 self.player.y < obstacle.y + obstacle.height and
                 self.player.y + self.player.height > obstacle.y):
                 self.game_over = True
+                if self.current_music:
+                    pg.mixer.music.fadeout(2000)  # Fade out music over 2 seconds when game over
         
         self.road.update()
         
@@ -310,6 +347,10 @@ class Game:
         self.last_obstacle_time = pg.time.get_ticks()
         self.obstacle_frequency = 1200
         self.clock_speed = 1.2
+        
+        # Restart music if it was playing before
+        if self.current_music:
+            pg.mixer.music.play(-1)
         
     def run(self):
         while True:
