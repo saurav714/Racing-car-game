@@ -22,6 +22,8 @@ jobs:
       run: |
         pip install pygame
 
-    - name: Run game
+    - name: Run game (without sound)
+      env:
+        CI: true  # مشخص می‌کنه که این اجرا در محیط CI هست
       run: |
         python atari.py
