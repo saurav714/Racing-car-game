@@ -22,6 +22,8 @@ jobs:
       run: |
         pip install pygame
 
-    - name: Run game
+    - name: Run game with dummy audio
+      env:
+        SDL_AUDIODRIVER: dummy
       run: |
         python atari.py
