@@ -5,7 +5,13 @@ import os
 
 # Initialize pygame
 pg.init()
-pg.mixer.init()
+
+# فقط init کردن صدا اگر در محیط CI نیستیم
+if not os.environ.get("CI"):
+    try:
+        pg.mixer.init()
+    except Exception as e:
+        print(f"Mixer init failed: {e}")
 
 # Game settings
 WIDTH, HEIGHT = 800, 600
@@ -37,30 +43,25 @@ def load_music():
             os.makedirs(music_folder)
             print(f"Created '{music_folder}' folder. Please add your music files there.")
             return None
-        
+
         music_files = [f for f in os.listdir(music_folder) if f.endswith(('.mp3', '.wav', '.ogg'))]
         if not music_files:
             print(f"No music files found in '{music_folder}' folder.")
             return None
-        
+
         selected_music = os.path.join(music_folder, random.choice(music_files))
         pg.mixer.music.load(selected_music)
         pg.mixer.music.set_volume(0.5)
+        pg.mixer.music.play(-1)  # پخش در حالت حلقه‌ای
+        print(f"Playing: {selected_music}")
         return selected_music
     except Exception as e:
         print(f"Error loading music: {e}")
         return None
 
-# init mixer only if not CI
+# Load music if not in CI
 if not os.environ.get("CI"):
-    import pygame as pg
-    pg.mixer.init()
-    # فقط اگه روی لوکال هستیم موزیک لود کن
-    from music import load_music
     load_music()
-    pg.mixer.music.play(-1)
-else:
-    import pygame as pg  # فقط برای اینکه pg تعریف شه
 # Enhanced car class with better styling and windows for all cars
 class Car:
     def __init__(self, x, y, color, player=False):
