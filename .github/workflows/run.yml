@@ -18,13 +18,15 @@ jobs:
       with:
         python-version: '3.10'
 
-    - name: Install pygame
+    - name: Install dependencies
       run: |
+        sudo apt-get update
+        sudo apt-get install -y xvfb
         pip install pygame
 
-    - name: Run game with dummy audio
+    - name: Run game in headless mode (with dummy audio)
       env:
         SDL_AUDIODRIVER: dummy
         CI: true
       run: |
-        python atari.py || echo "Game exited with error, but continuing..."
+        xvfb-run -a python atari.py || echo "Game exited with error, but continuing..."
