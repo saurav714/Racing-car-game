@@ -39,12 +39,14 @@ Game/
 ├── atari.py          # Main game file
 ├── highscore.txt     # High score storage
 └── README.md         # This file
-___ requirement.txt    # Install this
+___ requirement.txt   # Install this
+___ music             #enjoy with music
+___ screenshots       #folder
 ```
 
 ## 📸 Screenshots
-![Menu Screen](https://via.placeholder.com/400x300.png?text=Game+Menu) 
-![Gameplay](https://via.placeholder.com/400x300.png?text=In+Game+Action)
+![Menu Screen](https://github.com/VIDAKHOSHPEY22/Racing-car-game/blob/7eff43d06b5fe72609ba9ecde8aa4dc281fa9a2a/screenshots/game.jpg) 
+![Gameplay](https://github.com/VIDAKHOSHPEY22/Racing-car-game/blob/7eff43d06b5fe72609ba9ecde8aa4dc281fa9a2a/screenshots/end.jpg)
 
 ## 🛠️ Building Executables
 Windows:
