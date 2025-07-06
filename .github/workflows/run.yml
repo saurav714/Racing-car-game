@@ -27,3 +27,4 @@ jobs:
         SDL_AUDIODRIVER: dummy
       run: |
         python atari.py
+# Just a comment to trigger GitHub Actions again
