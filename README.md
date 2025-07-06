@@ -58,7 +58,7 @@ pyinstaller --onefile --windowed --icon=assets/icon.ico atari.py
 
 ![Game Preview](https://github.com/VIDAKHOSHPEY22/Racing-car-game/blob/c493b1a03de535124ca0e228081bc7049ccf37eb/screenshots/1751802576626-ezgif.com-video-to-gif-converter.gif)
 
-👉 [Watch full gameplay video](https://youtu.be/your-video-id)
+👉 [Watch full gameplay video](https://youtu.be/k5jrHx1iIzo?si=a_mqdvHf74gBDF1Z)
 ## 🤝 Contributing
 Pull requests welcome! For major changes, please open an issue first.
 
