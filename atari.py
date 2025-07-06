@@ -53,9 +53,14 @@ def load_music():
 
 # init mixer only if not CI
 if not os.environ.get("CI"):
+    import pygame as pg
     pg.mixer.init()
+    # فقط اگه روی لوکال هستیم موزیک لود کن
+    from music import load_music
     load_music()
     pg.mixer.music.play(-1)
+else:
+    import pygame as pg  # فقط برای اینکه pg تعریف شه
 # Enhanced car class with better styling and windows for all cars
 class Car:
     def __init__(self, x, y, color, player=False):
