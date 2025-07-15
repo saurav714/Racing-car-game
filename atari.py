@@ -48,15 +48,22 @@ def load_music():
         print(f"Error loading music: {e}")
         return None
 
-# Enhanced car class with better collision bounds and lane system
+# Enhanced car class with level-based speed scaling
 class Car:
-    def __init__(self, x, y, color, player=False):
+    def __init__(self, x, y, color, player=False, level=1):
         self.width = 45
         self.height = 80 if player else random.choice([75, 80, 85])
         self.x = x
         self.y = y
-        self.speed = BASE_SPEED if player else random.randint(2, 4)  # Slower enemy cars
-        self.original_speed = self.speed  # Store original speed for recovery
+        self.level = level
+        
+        # Speed scaling based on level
+        if player:
+            self.speed = BASE_SPEED + (level - 1) * 0.8  # Player speed increases more gradually
+        else:
+            self.speed = random.randint(2, 4) + (level - 1) * 0.5  # Enemy speed increases
+        
+        self.original_speed = self.speed
         self.color = color
         self.player = player
         self.window_color = CYAN if player else WHITE
@@ -66,6 +73,16 @@ class Car:
         self.road_left = 175
         self.road_right = WIDTH - 225
         self.lane_width = (self.road_right - self.road_left) // 3
+        
+    def update_speed_for_level(self, level):
+        """Update speed based on current level"""
+        self.level = level
+        if self.player:
+            self.speed = BASE_SPEED + (level - 1) * 0.8
+        else:
+            base_enemy_speed = random.randint(2, 4)
+            self.speed = base_enemy_speed + (level - 1) * 0.5
+        self.original_speed = self.speed
         
     def get_rect(self):
         """Return collision rectangle for proper collision detection"""
@@ -154,19 +171,26 @@ class Car:
             
             return self.y > HEIGHT + 50  # Give some buffer before removal
 
-# Enhanced Road class
+# Enhanced Road class with level-based speed
 class Road:
-    def __init__(self):
+    def __init__(self, level=1):
         self.road_width = 450
         self.road_x = (WIDTH - self.road_width) // 2
+        self.level = level
         self.stripes = []
         for i in range(12):
             self.stripes.append({
                 'y': i * 100 - 200,
                 'width': 50,
                 'height': 30,
-                'speed': BASE_SPEED + 1
+                'speed': BASE_SPEED + 1 + (level - 1) * 0.6  # Road animation speed increases
             })
+    
+    def update_level(self, level):
+        """Update road speed based on level"""
+        self.level = level
+        for stripe in self.stripes:
+            stripe['speed'] = BASE_SPEED + 1 + (level - 1) * 0.6
             
     def draw(self, screen):
         # Draw shoulders
@@ -194,7 +218,7 @@ class Road:
             if stripe['y'] > HEIGHT:
                 stripe['y'] = -stripe['height'] - 50
 
-# Game class with improved logic
+# Game class with level-based speed progression
 class Game:
     def __init__(self):
         self.screen = pg.display.set_mode((WIDTH, HEIGHT))
@@ -202,9 +226,9 @@ class Game:
         self.clock = pg.time.Clock()
         self.font = pg.font.Font(None, 42)
         self.small_font = pg.font.Font(None, 28)
-        self.player = Car(WIDTH // 2 - 22, HEIGHT - 120, BLUE, True)
+        self.player = Car(WIDTH // 2 - 22, HEIGHT - 120, BLUE, True, 1)
         self.obstacles = []
-        self.road = Road()
+        self.road = Road(1)
         self.score = 0
         self.level = 1
         self.game_over = False
@@ -213,11 +237,29 @@ class Game:
         self.obstacle_frequency = 2000  # Increased spawn time
         self.play_button = Button(WIDTH//2 - 100, HEIGHT//2, 200, 60, "START RACE")
         self.min_obstacle_distance = 120  # Minimum distance between obstacles
+        self.level_up_score = 5  # Score needed for next level
         
         # Load and play music
         self.current_music = load_music()
         if self.current_music:
             pg.mixer.music.play(-1)
+    
+    def update_level(self):
+        """Update game level and increase speeds"""
+        new_level = (self.score // self.level_up_score) + 1
+        if new_level > self.level:
+            self.level = new_level
+            # Update player speed
+            self.player.update_speed_for_level(self.level)
+            # Update road speed
+            self.road.update_level(self.level)
+            # Update existing obstacles speed
+            for obstacle in self.obstacles:
+                obstacle.update_speed_for_level(self.level)
+            
+            # Increase difficulty: spawn more frequently and closer together
+            self.obstacle_frequency = max(600, 2000 - (self.level - 1) * 100)
+            self.min_obstacle_distance = max(80, 120 - (self.level - 1) * 5)
             
     def can_spawn_obstacle(self, new_x, new_y):
         """Check if we can spawn an obstacle at the given position"""
@@ -226,7 +268,7 @@ class Game:
         # Check distance from existing obstacles
         for obstacle in self.obstacles:
             obstacle_rect = obstacle.get_rect()
-            # Check if too close vertically (increased distance for better spacing)
+            # Check if too close vertically (distance decreases with level)
             if abs(new_y - obstacle.y) < self.min_obstacle_distance:
                 # Check if in same or adjacent lane
                 new_lane = self.get_lane_from_x(new_x)
@@ -294,6 +336,9 @@ class Game:
             self.player.move("left")
         if keys[pg.K_RIGHT]:
             self.player.move("right")
+        
+        # Update level based on score
+        self.update_level()
             
         # Spawn obstacles with better logic
         current_time = pg.time.get_ticks()
@@ -309,17 +354,10 @@ class Game:
                     (60, 60, 220)    # Blue
                 ])
                 
-                new_obstacle = Car(spawn_x, spawn_y, color)
-                new_obstacle.speed = random.randint(2, 4)  # Slower than player
-                new_obstacle.original_speed = new_obstacle.speed
+                # Create obstacle with current level speed
+                new_obstacle = Car(spawn_x, spawn_y, color, False, self.level)
                 self.obstacles.append(new_obstacle)
                 self.last_obstacle_time = current_time
-                
-                # Gradually increase difficulty
-                if self.score > 0 and self.score % 5 == 0:
-                    self.obstacle_frequency = max(800, self.obstacle_frequency - 50)
-                    self.level = (self.score // 5) + 1
-                    self.min_obstacle_distance = max(100, self.min_obstacle_distance - 5)
                 
         # Move obstacles and remove off-screen ones
         for obstacle in self.obstacles[:]:
@@ -364,12 +402,13 @@ class Game:
             instructions = [
                 "Use LEFT/RIGHT arrows to steer your car",
                 "Avoid other vehicles on the road",
+                "Speed increases with each level!",
                 f"Current high score: {self.get_high_score()}"
             ]
             
             for i, line in enumerate(instructions):
                 text = self.small_font.render(line, True, WHITE)
-                self.screen.blit(text, (WIDTH//2 - text.get_width()//2, 180 + i*40))
+                self.screen.blit(text, (WIDTH//2 - text.get_width()//2, 180 + i*35))
             
             self.play_button.draw(self.screen, self.font)
         else:
@@ -380,21 +419,36 @@ class Game:
             for car in all_cars:
                 car.draw(self.screen)
                 
-            # HUD
-            hud_bg = pg.Surface((280, 120), pg.SRCALPHA)
+            # Enhanced HUD with speed indicator
+            hud_bg = pg.Surface((300, 140), pg.SRCALPHA)
             hud_bg.fill((0, 0, 0, 150))
-            pg.draw.rect(hud_bg, (255, 255, 255, 30), (0, 0, 280, 120), 2, border_radius=5)
+            pg.draw.rect(hud_bg, (255, 255, 255, 30), (0, 0, 300, 140), 2, border_radius=5)
             self.screen.blit(hud_bg, (10, 10))
             
             texts = [
                 f"Score: {self.score}",
                 f"Level: {self.level}",
+                f"Speed: {self.player.speed:.1f}",
                 f"Cars on road: {len(self.obstacles)}"
             ]
             
             for i, text in enumerate(texts):
                 rendered = self.small_font.render(text, True, WHITE)
                 self.screen.blit(rendered, (20, 20 + i*30))
+            
+            # Level progress indicator
+            progress = (self.score % self.level_up_score) / self.level_up_score
+            progress_width = 260
+            progress_height = 8
+            progress_x = 20
+            progress_y = 135
+            
+            # Progress bar background
+            pg.draw.rect(self.screen, (50, 50, 50), (progress_x, progress_y, progress_width, progress_height))
+            # Progress bar fill
+            pg.draw.rect(self.screen, (0, 200, 0), (progress_x, progress_y, progress_width * progress, progress_height))
+            # Progress bar border
+            pg.draw.rect(self.screen, WHITE, (progress_x, progress_y, progress_width, progress_height), 1)
             
             if self.game_over:
                 self.draw_game_over()
@@ -408,20 +462,26 @@ class Game:
         self.screen.blit(overlay, (0, 0))
         
         # Game over box
-        box = pg.Surface((400, 200), pg.SRCALPHA)
+        box = pg.Surface((400, 250), pg.SRCALPHA)
         box.fill((0, 0, 0, 200))
-        pg.draw.rect(box, (255, 255, 255, 30), (0, 0, 400, 200), 2)
-        self.screen.blit(box, (WIDTH//2 - 200, HEIGHT//2 - 100))
+        pg.draw.rect(box, (255, 255, 255, 30), (0, 0, 400, 250), 2)
+        self.screen.blit(box, (WIDTH//2 - 200, HEIGHT//2 - 125))
         
         # Game over text
         title = self.font.render("GAME OVER", True, RED)
-        self.screen.blit(title, (WIDTH//2 - title.get_width()//2, HEIGHT//2 - 80))
+        self.screen.blit(title, (WIDTH//2 - title.get_width()//2, HEIGHT//2 - 100))
         
         score = self.small_font.render(f"Final Score: {self.score}", True, WHITE)
-        self.screen.blit(score, (WIDTH//2 - score.get_width()//2, HEIGHT//2 - 30))
+        self.screen.blit(score, (WIDTH//2 - score.get_width()//2, HEIGHT//2 - 50))
+        
+        level = self.small_font.render(f"Level Reached: {self.level}", True, WHITE)
+        self.screen.blit(level, (WIDTH//2 - level.get_width()//2, HEIGHT//2 - 20))
+        
+        speed = self.small_font.render(f"Final Speed: {self.player.speed:.1f}", True, WHITE)
+        self.screen.blit(speed, (WIDTH//2 - speed.get_width()//2, HEIGHT//2 + 10))
         
         restart = self.small_font.render("Press R to restart", True, YELLOW)
-        self.screen.blit(restart, (WIDTH//2 - restart.get_width()//2, HEIGHT//2 + 20))
+        self.screen.blit(restart, (WIDTH//2 - restart.get_width()//2, HEIGHT//2 + 50))
         
     def get_high_score(self):
         try:
@@ -436,9 +496,9 @@ class Game:
         
     def reset_game(self):
         self.save_high_score()
-        self.player = Car(WIDTH // 2 - 22, HEIGHT - 120, BLUE, True)
+        self.player = Car(WIDTH // 2 - 22, HEIGHT - 120, BLUE, True, 1)
         self.obstacles = []
-        self.road = Road()
+        self.road = Road(1)
         self.score = 0
         self.level = 1
         self.game_over = False
