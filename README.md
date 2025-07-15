@@ -33,6 +33,7 @@ pip install requirement.txt
 | →   | Move Right |
 | R   | Restart Game |
 
+
 ## 📁 Project Structure
 ```
 Game/
